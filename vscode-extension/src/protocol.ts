@@ -19,4 +19,8 @@ export type WebviewMessage =
   | { type: "revealNode"; nodeId: string; line?: number | null; charRange?: { start: number; end: number } | null }
   | { type: "pickDialect" }
   | { type: "refresh" }
-  | { type: "copyNodeName"; name: string };
+  | { type: "copyNodeName"; name: string }
+  /** Save a dialect cheat sheet via the host's save dialog. */
+  | { type: "downloadSyntax"; fileName: string; content: string }
+  /** Insert a syntax template into the active SQL editor. */
+  | { type: "insertSnippet"; sql: string };

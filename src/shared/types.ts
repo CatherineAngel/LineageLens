@@ -51,6 +51,8 @@ export interface StatementResult {
   edges: { source: string; target: string; kind: string }[];
   columns: OutputColumn[];
   warnings: string[];
+  /** Lossless rewrites (parameter masking, dialect syntax stripping). */
+  notes?: string[];
 }
 
 export interface GraphNode {
@@ -63,6 +65,10 @@ export interface GraphNode {
   statements: number[];
   /** True for synthetic nodes such as the result set of a bare SELECT. */
   synthetic?: boolean;
+  /** 1-based line to reveal in the editor when this node is clicked. */
+  line?: number | null;
+  /** UTF-16 character offsets within that line, for precise placement. */
+  charRange?: { start: number; end: number } | null;
 }
 
 export interface GraphEdge {
@@ -82,6 +88,8 @@ export interface Stats {
   tableCount: number;
   edgeCount: number;
   columnEdgeCount: number;
+  /** End-to-end time measured by the extension host. */
+  wallMs?: number;
 }
 
 export interface AnalyzeResult {

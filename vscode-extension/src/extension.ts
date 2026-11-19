@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as os from "node:os";
 import { EngineClient } from "./engineClient";
 import { LineagePanel } from "./lineagePanel";
 import { pickDialect, resolveDialect } from "./dialects";
@@ -109,6 +110,8 @@ function ensurePanel(): LineagePanel {
     onPickDialect: () => void chooseDialect(),
     onRefresh: () => void analyzeActiveEditor(),
     onCopy: copyNodeName,
+    onDownloadSyntax: (fileName, content) => void saveSyntaxSheet(fileName, content),
+    onInsertSnippet: (sql) => void insertSnippet(sql),
   });
 }
 
@@ -293,6 +296,55 @@ function revealLine(line: number, charRange?: { start: number; end: number } | n
 function copyNodeName(name: string): void {
   void vscode.env.clipboard.writeText(name);
   void vscode.window.setStatusBarMessage(`已复制 ${name}`, 1600);
+}
+
+/** Save a dialect cheat sheet wherever the user chooses. */
+async function saveSyntaxSheet(fileName: string, content: string): Promise<void> {
+  const target = await vscode.window.showSaveDialog({
+    saveLabel: "保存语法速查",
+    filters: { SQL: ["sql"], "所有文件": ["*"] },
+    defaultUri: vscode.Uri.joinPath(
+      vscode.workspace.workspaceFolders?.[0]?.uri ?? vscode.Uri.file(os.homedir()),
+      fileName,
+    ),
+  });
+  if (!target) return;
+
+  try {
+    await vscode.workspace.fs.writeFile(target, Buffer.from(content, "utf8"));
+    const action = await vscode.window.showInformationMessage(
+      `已保存 ${fileName}`,
+      "打开",
+    );
+    if (action === "打开") {
+      await vscode.window.showTextDocument(target, { preview: false });
+    }
+  } catch (error) {
+    void vscode.window.showErrorMessage(`保存失败: ${String(error)}`);
+  }
+}
+
+/** Insert a syntax template at the cursor, or open it in a new untitled file. */
+async function insertSnippet(sql: string): Promise<void> {
+  const editor = activeSqlEditor();
+  if (editor && !editor.document.isClosed) {
+    await editor.edit((builder) => {
+      const selection = editor.selection;
+      if (selection.isEmpty) {
+        builder.insert(selection.active, sql);
+      } else {
+        // Replacing a selection also drops its highlighting, which is usually
+        // what the user wants when they picked a snippet deliberately.
+        builder.replace(selection, sql);
+      }
+    });
+    await vscode.window.showTextDocument(editor.document, editor.viewColumn, false);
+    return;
+  }
+
+  // No SQL editor open: give them a new scratch file instead of doing nothing.
+  const document = await vscode.workspace.openTextDocument({ language: "sql", content: sql });
+  await vscode.window.showTextDocument(document, { preview: false });
 }
 
 function fileNameOf(document: vscode.TextDocument): string {

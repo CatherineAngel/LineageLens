@@ -25,6 +25,7 @@ import {
   GraphNode,
 } from "./shared/types";
 import type { HostMessage, WebviewMessage } from "../protocol";
+import { SyntaxSheet } from "./components/SyntaxSheet";
 
 declare function acquireVsCodeApi(): {
   postMessage: (message: WebviewMessage) => void;
@@ -70,6 +71,7 @@ function Workspace() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  const [showSyntax, setShowSyntax] = useState(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<LineageNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -176,6 +178,13 @@ function Workspace() {
             {dialect.label} ▾
           </button>
           <span className="dialect-origin">{originLabel}</span>
+          <button
+            className="syntax-trigger"
+            onClick={() => setShowSyntax(true)}
+            title={`查看 ${dialect.label} 语法速查（建表 / 写入 / 删除模板），可下载 .sql`}
+          >
+            语法速查 ↓
+          </button>
         </div>
 
         <div className="topbar__status">
@@ -418,6 +427,14 @@ function Workspace() {
           </button>
         </div>
       )}
+
+      <SyntaxSheet
+        dialectId={dialectId}
+        open={showSyntax}
+        onClose={() => setShowSyntax(false)}
+        postMessage={vscode.postMessage}
+        onUseSnippet={(sql) => vscode.postMessage({ type: "insertSnippet", sql })}
+      />
     </div>
   );
 }
