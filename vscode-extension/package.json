@@ -1,0 +1,166 @@
+{
+  "name": "lineage-lens",
+  "displayName": "LineageLens — SQL 血缘",
+  "description": "在 VS Code 中实时查看 SQL 的表级与字段级血缘，支持 Hive / GaussDB / OceanBase / GoldenDB / MySQL，完全离线。",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "sql",
+    "lineage",
+    "血缘",
+    "hive",
+    "gaussdb",
+    "oceanbase",
+    "data warehouse"
+  ],
+  "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true,
+      "description": "SQL 血缘只做静态解析，不执行工作区中的任何代码，因此可安全用于受限模式。"
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "需要读取工作区文件内容做分析。"
+    }
+  },
+  "activationEvents": [
+    "onLanguage:sql",
+    "onLanguage:hive-sql",
+    "onLanguage:mysql"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "sqlLineage.selectDialect",
+        "title": "SQL 血缘: 选择方言"
+      },
+      {
+        "command": "sqlLineage.showGraph",
+        "title": "SQL 血缘: 显示血缘图"
+      },
+      {
+        "command": "sqlLineage.analyzeSelection",
+        "title": "SQL 血缘: 分析选中片段"
+      },
+      {
+        "command": "sqlLineage.toggleRealtime",
+        "title": "SQL 血缘: 开关实时分析"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "sqlLineage.analyzeSelection",
+          "when": "editorHasSelection && editorLangId == sql",
+          "group": "sqlLineage@1"
+        },
+        {
+          "command": "sqlLineage.showGraph",
+          "when": "editorLangId == sql",
+          "group": "sqlLineage@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "sqlLineage.analyzeSelection",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SQL Lineage",
+      "properties": {
+        "sqlLineage.defaultDialect": {
+          "type": "string",
+          "enum": [
+            "hive",
+            "gaussdb",
+            "oceanbase-mysql",
+            "oceanbase-oracle",
+            "goldendb",
+            "mysql"
+          ],
+          "enumDescriptions": [
+            "Hive SQL（原生支持）",
+            "GaussDB / DWS（自动剥离 DISTRIBUTE BY）",
+            "OceanBase MySQL 模式（自动改写 REPLACE INTO）",
+            "OceanBase Oracle 模式（跳过 PL/SQL 块）",
+            "GoldenDB（MySQL 兼容）",
+            "MySQL"
+          ],
+          "default": "hive",
+          "description": "默认 SQL 方言"
+        },
+        "sqlLineage.detectFromFileHeader": {
+          "type": "boolean",
+          "default": true,
+          "description": "允许用文件头 `-- dialect: hive` 覆盖默认方言"
+        },
+        "sqlLineage.realtime": {
+          "type": "boolean",
+          "default": true,
+          "description": "编辑时自动刷新血缘图"
+        },
+        "sqlLineage.debounceMs": {
+          "type": "number",
+          "default": 500,
+          "minimum": 100,
+          "maximum": 5000,
+          "description": "编辑后触发分析的防抖时间（毫秒）"
+        },
+        "sqlLineage.maxFileSizeKB": {
+          "type": "number",
+          "default": 2048,
+          "description": "超过此大小的文件不做实时分析，仅手动触发"
+        },
+        "sqlLineage.viewMode": {
+          "type": "string",
+          "enum": [
+            "side",
+            "panel"
+          ],
+          "enumDescriptions": [
+            "在编辑器右侧打开",
+            "在底部面板打开"
+          ],
+          "default": "side",
+          "description": "血缘图的显示位置"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.9",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/vscode": "^1.85.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "pyodide": "^0.26.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@xyflow/react": "^12.3.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

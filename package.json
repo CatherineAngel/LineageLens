@@ -1,0 +1,32 @@
+{
+  "name": "lineage-lens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SQL lineage for data engineers — parse Hive / GaussDB / OceanBase / GoldenDB / MySQL and visualise table- and column-level lineage, fully offline.",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run prepare:pyodide && vite",
+    "build": "npm run prepare:pyodide && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:engine && npm run test:params && npm run test:templates",
+    "test:engine": "python3 engine/test_engine.py",
+    "test:params": "python3 engine/test_params.py",
+    "test:templates": "python3 engine/test_templates.py",
+    "prepare:pyodide": "node scripts/prepare-pyodide.mjs"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@xyflow/react": "^12.3.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "pyodide": "^0.26.4",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

@@ -1,0 +1,40 @@
+# ---- dependencies ----
+node_modules/
+.pnp/
+.pnp.js
+
+# ---- build output ----
+dist/
+media/webview.js
+media/webview.css
+media/*.map
+vscode-extension/media/webview.js
+vscode-extension/media/webview.css
+vscode-extension/media/*.map
+*.vsix
+
+# ---- regenerated runtime assets ----
+# Pyodide is copied from node_modules by scripts/prepare-pyodide.mjs (browser)
+# and scripts/build.mjs (extension). Never commit the 13-15 MB copy.
+public/pyodide/
+vscode-extension/vendor/
+
+# ---- python ----
+.venv/
+.venv-*/
+__pycache__/
+*.pyc
+*.pyo
+
+# ---- scratch ----
+.spike/
+.probe*
+
+# ---- editor & OS ----
+.DS_Store
+.idea/
+*.swp
+*.log
+
+# ---- local tooling (per-developer, not shared) ----
+.commandcode/

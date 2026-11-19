@@ -1,0 +1,13 @@
+# Sources and tooling are not needed at runtime.
+src/**
+scripts/**
+node_modules/**
+**/*.map
+**/*.ts
+!vendor/**
+tsconfig.json
+.vscodeignore
+.gitignore
+
+# Dev-only artifacts
+*.vsix
