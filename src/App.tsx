@@ -26,7 +26,10 @@ import {
 import { useEngine } from "./hooks/useEngine";
 import { SAMPLES } from "./samples";
 import { SyntaxSheet } from "./components/SyntaxSheet";
-import { SourceInventoryPanel } from "./components/SourceInventory";
+import {
+  SourceInventoryDrawer,
+  SourceInventoryTrigger,
+} from "./components/SourceInventory";
 
 const nodeTypes: NodeTypes = { table: TableNode };
 
@@ -63,6 +66,7 @@ function Workspace() {
   const [realtime, setRealtime] = useState(true);
   const [showPanel, setShowPanel] = useState(true);
   const [showSyntax, setShowSyntax] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
 
   const { status, detail, ready, analyze } = useEngine();
 
@@ -154,8 +158,10 @@ function Workspace() {
       result.graph.edges.map((e) => e.id).join("|"),
       result.statements.map((s) => s.status).join("|"),
       stats?.parseMs ?? 0,
+      // Opening the drawer narrows the canvas, so the graph must re-fit.
+      showInventory ? "drawer" : "full",
     ].join("#");
-  }, [result, stats]);
+  }, [result, stats, showInventory]);
 
   return (
     <div className="app">
@@ -263,6 +269,11 @@ function Workspace() {
               )}
             </div>
             <div className="graph-toolbar__right">
+              <SourceInventoryTrigger
+                inventory={result?.graph.sourceInventory}
+                open={showInventory}
+                onToggle={() => setShowInventory((v) => !v)}
+              />
               <button
                 className="ghost-btn"
                 onClick={() =>
@@ -288,7 +299,7 @@ function Workspace() {
             </div>
           </div>
 
-          <div className="graph-canvas">
+          <div className={`graph-canvas ${showInventory ? "graph-canvas--with-drawer" : ""}`}>
             {result && graphNodes.length === 0 && (
               <div className="empty-state">
                 <div className="empty-state__icon">∅</div>
@@ -323,33 +334,34 @@ function Workspace() {
                 style={{ background: "#0b1220" }}
               />
             </ReactFlow>
+
+            <SourceInventoryDrawer
+              inventory={result?.graph.sourceInventory}
+              open={showInventory}
+              onClose={() => setShowInventory(false)}
+              onRevealTable={() => {
+                /* prototype has no editor; jump is a no-op here */
+              }}
+              onCopy={(text) => void navigator.clipboard?.writeText(text)}
+            />
           </div>
 
           {showPanel && (
             <div className="detail-panel">
-              <SourceInventoryPanel
-                inventory={result?.graph.sourceInventory}
-                onRevealTable={() => {
-                  /* prototype has no editor; jump is a no-op here */
-                }}
-                onCopy={(text) => void navigator.clipboard?.writeText(text)}
-              />
-
-              <div className="detail-panel__statements">
-                <div className="detail-panel__head">
-                  <span>语句</span>
-                  <span className="detail-panel__count">{result?.statements.length ?? 0} 条</span>
-                  {issueCount > 0 && (
-                    <span className="detail-panel__issues">⚠ {issueCount} 个提示</span>
-                  )}
-                </div>
-                <ul className="stmt-list">
-                  {(result?.statements ?? []).map((statement) => {
-                    const meta = STATUS_META[statement.status];
-                    return (
-                      <li
-                        key={statement.index}
-                        className={`stmt-item stmt-item--${statement.status}`}
+              <div className="detail-panel__head">
+                <span>语句</span>
+                <span className="detail-panel__count">{result?.statements.length ?? 0} 条</span>
+                {issueCount > 0 && (
+                  <span className="detail-panel__issues">⚠ {issueCount} 个提示</span>
+                )}
+              </div>
+              <ul className="stmt-list">
+                {(result?.statements ?? []).map((statement) => {
+                  const meta = STATUS_META[statement.status];
+                  return (
+                    <li
+                      key={statement.index}
+                      className={`stmt-item stmt-item--${statement.status}`}
                     >
                       <div className="stmt-item__head">
                         <span className="stmt-item__index">#{statement.index + 1}</span>
@@ -403,44 +415,43 @@ function Workspace() {
                     </li>
                   );
                 })}
-                </ul>
+              </ul>
 
-                <div className="legend">
-                  <div className="legend__title">图例</div>
-                  <div className="legend__row">
-                    {(["direct", "aggregate", "function", "case"] as const).map((key) => {
-                      const meta = TRANSFORM_META[key];
-                      return (
-                        <span key={key} className="legend__item">
-                          <span
-                            className="legend__line"
-                            style={{
-                              background: meta.color,
-                              height: 2,
-                              ...(meta.dash
-                                ? {
-                                    backgroundImage: `repeating-linear-gradient(90deg, ${meta.color} 0 6px, transparent 6px 9px)`,
-                                    background: "none",
-                                  }
-                                : {}),
-                            }}
-                          />
-                          {meta.label}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  <div className="legend__row">
-                    {(Object.keys(STATUS_META) as Array<keyof typeof STATUS_META>).map((key) => (
+              <div className="legend">
+                <div className="legend__title">图例</div>
+                <div className="legend__row">
+                  {(["direct", "aggregate", "function", "case"] as const).map((key) => {
+                    const meta = TRANSFORM_META[key];
+                    return (
                       <span key={key} className="legend__item">
                         <span
-                          className="legend__dot"
-                          style={{ background: STATUS_META[key].color }}
+                          className="legend__line"
+                          style={{
+                            background: meta.color,
+                            height: 2,
+                            ...(meta.dash
+                              ? {
+                                  backgroundImage: `repeating-linear-gradient(90deg, ${meta.color} 0 6px, transparent 6px 9px)`,
+                                  background: "none",
+                                }
+                              : {}),
+                          }}
                         />
-                        {STATUS_META[key].label}
+                        {meta.label}
                       </span>
-                    ))}
-                  </div>
+                    );
+                  })}
+                </div>
+                <div className="legend__row">
+                  {(Object.keys(STATUS_META) as Array<keyof typeof STATUS_META>).map((key) => (
+                    <span key={key} className="legend__item">
+                      <span
+                        className="legend__dot"
+                        style={{ background: STATUS_META[key].color }}
+                      />
+                      {STATUS_META[key].label}
+                    </span>
+                  ))}
                 </div>
               </div>
             </div>

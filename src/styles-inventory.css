@@ -1,30 +1,93 @@
 /* ---------------------------------------------------------- source inventory */
-.inventory {
-  width: 240px;
-  flex-shrink: 0;
-  border-right: 1px solid var(--border);
+
+/* Toolbar trigger: shows the counts so you never have to open it to know. */
+.inventory-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-trigger.is-active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.inventory-trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.inventory-trigger__schemas {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.inventory-trigger.is-active .inventory-trigger__schemas {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.inventory-trigger__chevron {
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* Drawer: docks to the right edge of the graph area, which is narrowed while
+   open (see .graph-canvas--with-drawer) so no node is ever covered. */
+.inventory-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  background: #0a1220;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: -14px 0 32px -18px #000;
+  z-index: 30;
+  overflow: hidden;
 }
 
-.inventory--empty {
-  padding: 12px 14px;
-  gap: 4px;
-  justify-content: center;
+/* The graph must shrink, not be covered. React Flow sizes itself to this box,
+   so we only narrow the box - the drawer sits in the freed space. `flex: 1` from
+   the base rule still governs the *height*, so it must not be overridden. */
+.graph-canvas--with-drawer {
+  margin-right: 300px;
 }
 
-.inventory__head {
+/* When the layout stacks vertically the graph is already narrow, so the drawer
+   floats over it and can be dismissed - shrinking further would leave nothing. */
+@media (max-width: 1100px) {
+  .graph-canvas--with-drawer {
+    margin-right: 0;
+  }
+
+  .inventory-drawer {
+    width: min(300px, 70%);
+    /* Floating over a graph that is already short: keep it dismissible and
+       slightly translucent so the shape underneath stays legible. */
+    background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
+    backdrop-filter: blur(3px);
+    border-left: 1px solid var(--border-strong);
+    border-radius: 10px 0 0 10px;
+    top: 8px;
+    bottom: 8px;
+  }
+}
+
+.inventory-drawer__head {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.inventory__title {
+.inventory-drawer__title {
   font-size: 11.5px;
   text-transform: uppercase;
   letter-spacing: 0.7px;
@@ -33,30 +96,33 @@
   white-space: nowrap;
 }
 
-.inventory__summary {
+.inventory-drawer__summary {
   font-size: 10.5px;
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.inventory__hint {
-  font-size: 11px;
-  color: var(--text-faint);
-}
-
-.inventory__actions {
+.inventory-drawer__actions {
   margin-left: auto;
+  display: flex;
+  gap: 5px;
 }
 
-.inventory__actions .ghost-btn {
+.inventory-drawer__actions .ghost-btn {
   font-size: 10px;
   padding: 2px 7px;
 }
 
-.inventory__groups {
+.inventory-drawer__empty {
+  padding: 16px 14px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.inventory-drawer__groups {
   overflow-y: auto;
-  padding: 6px 0 10px;
+  padding: 4px 0 10px;
   min-height: 0;
 }
 
@@ -79,7 +145,7 @@
 }
 
 .inventory__group-head:hover {
-  background: #12203a;
+  background: #17233a;
 }
 
 .inventory__chevron {
@@ -125,7 +191,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 0 12px 0 27px;
+  padding: 0 12px 0 29px;
 }
 
 .inventory__table-name {
@@ -141,7 +207,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
-  font-family: "JetBrains Mono", Menlo, monospace;
 }
 
 .inventory__table-name:hover {
@@ -165,13 +230,4 @@
 .inventory__badge--degraded {
   color: #f59e0b;
   border: 1px solid #f59e0b66;
-}
-
-/* Statements column beside the inventory. */
-.detail-panel__statements {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  flex: 1;
 }
