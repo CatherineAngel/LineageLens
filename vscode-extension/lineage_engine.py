@@ -171,8 +171,12 @@ _PLACEHOLDER_PREFIX = "zzparam"
 
 
 def _blank(match) -> str:
-    """Replace with same-length spaces so every AST offset stays valid."""
-    return " " * len(match.group(0))
+    """Replace with same-length whitespace, preserving newlines.
+
+    Every offset must survive the rewrite, including *line* numbers - turning a
+    newline into a space would shift all later positions by one line.
+    """
+    return "".join("\n" if ch == "\n" else " " for ch in match.group(0))
 
 
 def _string_literal_spans(sql: str) -> list[tuple[int, int]]:
@@ -291,7 +295,15 @@ def preprocess(sql: str, dialect_id: str) -> tuple[str, list[str], dict[str, str
     if dialect_id in ("mysql", "oceanbase-mysql", "goldendb"):
         if _REPLACE_INTO.search(sql):
             notes.append("REPLACE INTO 已按 INSERT INTO 等价解析（血缘一致）")
-            sql = _REPLACE_INTO.sub(lambda m: "INSERT " + " " * (len(m.group(0)) - 7), sql)
+
+            def _rewrite_replace(match: re.Match) -> str:
+                # `REPLACE` (7) -> `INSERT ` (7): identical width, and any
+                # newline inside `REPLACE INTO` must stay a newline.
+                text = match.group(0)
+                head = "INSERT "
+                return head + "".join("\n" if ch == "\n" else " " for ch in text[7:])
+
+            sql = _REPLACE_INTO.sub(_rewrite_replace, sql)
 
     if param_map:
         notes.append(f"已解析参数化标识符: {', '.join(sorted(set(param_map.values())))}")
@@ -301,23 +313,29 @@ def preprocess(sql: str, dialect_id: str) -> tuple[str, list[str], dict[str, str
 
 # ---------------------------------------------------------------- positions
 
-_UTF16_CACHE: dict[int, list[int]] = {}
+_UTF16_CACHE: dict[str, list[int]] = {}
 
 
 def _utf16_offsets(text: str) -> list[int]:
-    """codepoint index -> utf16 code unit index map."""
-    key = id(text)
-    cached = _UTF16_CACHE.get(key)
-    if cached is not None and len(cached) == len(text) + 1:
+    """codepoint index -> utf16 code unit index map.
+
+    Keyed by the text itself: `id()` is not stable, since a freed string's id
+    can be reused by a different string of the same length.
+    """
+    cached = _UTF16_CACHE.get(text)
+    if cached is not None:
         return cached
+
     out = [0] * (len(text) + 1)
     total = 0
     for i, ch in enumerate(text):
         out[i] = total
         total += 2 if ord(ch) > 0xFFFF else 1
     out[len(text)] = total
-    _UTF16_CACHE.clear()
-    _UTF16_CACHE[key] = out
+
+    if len(_UTF16_CACHE) > 4:
+        _UTF16_CACHE.clear()
+    _UTF16_CACHE[text] = out
     return out
 
 
@@ -657,7 +675,6 @@ def _fallback_extract(sql: str) -> dict:
 def _analyze_multitable(
     ast,
     slice_info: dict,
-    payload: dict,
     processed: str,
     param_map: dict[str, str],
     pre_notes: list[str],
@@ -681,13 +698,18 @@ def _analyze_multitable(
         if source_node is not None and isinstance(source_node, exp.Table):
             source_name = _restore_in_name(_short_name(source_node), param_map)
             if source_name and source_name not in [s["name"] for s in sources]:
+                mt_range = _range_from_meta(source_node.this, processed)
+                if mt_range is not None:
+                    mt_range["line"] = (mt_range.get("line") or 1) + (
+                        slice_info.get("startLine", 1) - 1
+                    )
                 sources.append(
                     {
                         "name": source_name,
                         "db": _restore_in_name(source_node.db or "", param_map),
                         "table": _restore_in_name(source_node.name, param_map),
                         "alias": "",
-                        "range": _range_from_meta(source_node.this, processed),
+                        "range": mt_range,
                     }
                 )
             edges.append({"source": source_name, "target": target_name, "kind": "table"})
@@ -800,7 +822,7 @@ def _analyze_statement(slice_info: dict, payload: dict) -> dict:
     # Hive `FROM src INSERT ... INSERT ...` writes one source into many tables.
     # sqlglot models it as MultitableInserts, which owns no lineage of its own.
     if isinstance(ast, exp.MultitableInserts):
-        return _analyze_multitable(ast, slice_info, payload, processed, param_map, pre_notes)
+        return _analyze_multitable(ast, slice_info, processed, param_map, pre_notes)
 
     kind = _statement_kind(ast)
     target_node = _target_of(ast)
@@ -858,13 +880,21 @@ def _analyze_statement(slice_info: dict, payload: dict) -> dict:
             if key in seen:
                 continue
             seen.add(key)
+            # `sql` here is one statement slice, so the reported line is relative
+            # to the statement. Shift it into document coordinates, otherwise a
+            # click scrolls to line 3 instead of the source's real line.
+            src_range = _range_from_meta(node.this, sql)
+            if src_range is not None:
+                src_range["line"] = (src_range.get("line") or 1) + (
+                    slice_info.get("startLine", 1) - 1
+                )
             sources.append(
                 {
                     "name": name,
                     "db": _restore_in_name(node.db or "", param_map),
                     "table": _restore_in_name(node.name, param_map),
                     "alias": alias or "",
-                    "range": _range_from_meta(node.this, sql),
+                    "range": src_range,
                 }
             )
 
@@ -1001,7 +1031,7 @@ def analyze(payload_json: str) -> str:
                     "degradedCount": degraded,
                     "tableCount": len(graph["nodes"]),
                     "edgeCount": len(graph["edges"]),
-                    "columnEdgeCount": sum(len(s["columns"]) for s in statements),
+                    "columnEdgeCount": len(graph["columnEdges"]),
                 },
             }
         )

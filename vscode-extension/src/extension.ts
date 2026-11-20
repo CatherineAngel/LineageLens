@@ -192,34 +192,45 @@ async function run(
 ): Promise<void> {
   const panel = ensurePanel();
 
+  // Claim the sequence number before any early return, so a later call always
+  // supersedes this one and owns the busy flag.
+  const seq = ++analysisSeq;
+
   if (!sql.trim()) {
     panel.sendEmpty("当前内容为空", fileNameOf(document));
+    panel.sendBusy(false);
     return;
   }
 
   const status = engine.getStatus();
   if (status.state === "error") {
     panel.sendStatus(status.detail, "error");
+    panel.sendBusy(false);
     return;
   }
 
   const { spec, origin } = resolveDialect(document, dialectOverrides);
-  const seq = ++analysisSeq;
 
   panel.sendBusy(true);
   if (status.state !== "ready") panel.sendStatus(status.detail, "loading");
 
   const started = Date.now();
-  const result = (await engine.analyze({
-    dialectId: spec.id,
-    sqlglotDialect: spec.sqlglotDialect,
-    sql,
-    schema: {},
-    options: { includeColumnLineage: true, maxStatements: 500 },
-  })) as AnalyzeResult | null;
+  let result: AnalyzeResult | null = null;
+  try {
+    result = (await engine.analyze({
+      dialectId: spec.id,
+      sqlglotDialect: spec.sqlglotDialect,
+      sql,
+      schema: {},
+      options: { includeColumnLineage: true, maxStatements: 500 },
+    })) as AnalyzeResult | null;
+  } finally {
+    // Only the newest run may clear the indicator; an older one finishing late
+    // must not fight with the run that replaced it.
+    if (seq === analysisSeq) panel.sendBusy(false);
+  }
 
   if (seq !== analysisSeq) return; // superseded by a newer edit
-  panel.sendBusy(false);
 
   if (!result) {
     panel.sendStatus("分析失败（引擎未返回结果）", "error");

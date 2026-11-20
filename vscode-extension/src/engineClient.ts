@@ -92,6 +92,7 @@ export class EngineClient {
 
     this.worker.on("error", (error) => {
       this.setStatus("error", `引擎进程异常: ${String(error)}`);
+      this.failPending();
       this.worker = null;
     });
 
@@ -99,6 +100,8 @@ export class EngineClient {
       if (code !== 0 && this.status.state !== "error") {
         this.setStatus("error", `引擎进程退出 (code ${code})`);
       }
+      // Callers must never be left awaiting a dead worker.
+      this.failPending();
       this.worker = null;
     });
 
@@ -108,16 +111,45 @@ export class EngineClient {
   async analyze(payload: AnalyzePayload): Promise<unknown> {
     this.start();
     if (!this.worker) return null;
+
+    // A wedged worker must not hang the editor forever; 30s is far beyond the
+    // worst observed case (~1.4s including cold start).
+    const timeoutMs = 30_000;
     const requestId = this.nextId++;
+
     return new Promise<unknown>((resolve) => {
-      this.pending.set(requestId, resolve);
-      this.worker!.postMessage({ type: "analyze", requestId, payload });
+      const timer = setTimeout(() => {
+        if (this.pending.delete(requestId)) {
+          this.setStatus("error", `引擎响应超时（${timeoutMs / 1000}s）`);
+          resolve(null);
+        }
+      }, timeoutMs);
+      timer.unref?.();
+
+      this.pending.set(requestId, (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      });
+
+      try {
+        this.worker!.postMessage({ type: "analyze", requestId, payload });
+      } catch (error) {
+        clearTimeout(timer);
+        this.pending.delete(requestId);
+        resolve(null);
+      }
     });
   }
 
-  dispose(): void {
-    for (const resolve of this.pending.values()) resolve(null);
+  /** Resolve every in-flight request with null so no caller awaits forever. */
+  private failPending(): void {
+    const resolvers = [...this.pending.values()];
     this.pending.clear();
+    for (const resolve of resolvers) resolve(null);
+  }
+
+  dispose(): void {
+    this.failPending();
     void this.worker?.terminate();
     this.worker = null;
   }
