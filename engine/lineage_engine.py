@@ -16,6 +16,9 @@ from sqlglot.optimizer.scope import traverse_scope
 
 __all__ = ["analyze", "split_statements"]
 
+# Group label for tables written without a schema qualifier (`FROM stg_log`).
+SCHEMA_UNSPECIFIED = "(未指定库)"
+
 
 # ---------------------------------------------------------------- statement split
 
@@ -1047,6 +1050,58 @@ def analyze(payload_json: str) -> str:
         )
 
 
+def _build_source_inventory(nodes: dict[str, dict]) -> dict:
+    """Group the file's *external* input tables by schema.
+
+    An external input is a table this file only reads. Tables the file also
+    writes (`roles` contains "target") are internal intermediates produced by
+    another statement in the same file, so they are excluded - otherwise every
+    file would report its own staging tables as inputs.
+
+    Schema names keep their original spelling, including `${Schema}` templates:
+    they identify the environment parameter, not a physical database.
+    """
+    groups: dict[str, list[dict]] = {}
+
+    for node in nodes.values():
+        if node.get("synthetic"):
+            continue
+        roles = node.get("roles") or []
+        if "source" not in roles or "target" in roles:
+            continue
+
+        db = node.get("db") or ""
+        group_key = db if db else SCHEMA_UNSPECIFIED
+        groups.setdefault(group_key, []).append(
+            {
+                "table": node.get("table") or node.get("id"),
+                "fullName": node.get("id"),
+                "status": node.get("status"),
+                "line": node.get("line"),
+                "charRange": node.get("charRange"),
+                "statements": node.get("statements") or [],
+            }
+        )
+
+    ordered = []
+    for key in sorted(groups, key=lambda k: (k == SCHEMA_UNSPECIFIED, k)):
+        tables = sorted(groups[key], key=lambda t: t["table"])
+        ordered.append(
+            {
+                "schema": key,
+                "isParameter": key.startswith(("${", "#{", "{{")),
+                "count": len(tables),
+                "tables": tables,
+            }
+        )
+
+    return {
+        "groups": ordered,
+        "totalTables": sum(g["count"] for g in ordered),
+        "schemaCount": len(ordered),
+    }
+
+
 def _build_graph(statements: list[dict]) -> dict:
     nodes: dict[str, dict] = {}
     table_edges: dict[tuple, dict] = {}
@@ -1145,4 +1200,5 @@ def _build_graph(statements: list[dict]) -> dict:
             for column in statement.get("columns", [])
             for edge in column.get("edges", [])
         ],
+        "sourceInventory": _build_source_inventory(nodes),
     }

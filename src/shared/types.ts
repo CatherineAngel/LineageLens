@@ -100,8 +100,35 @@ export interface AnalyzeResult {
     nodes: GraphNode[];
     edges: GraphEdge[];
     columnEdges: ColumnEdge[];
+    /** External input tables of this file, grouped by schema. */
+    sourceInventory?: SourceInventory;
   };
   stats: Stats;
+}
+
+export interface SourceTableRef {
+  table: string;
+  /** Schema-qualified name as written, e.g. `${Schema}.ods_order`. */
+  fullName: string;
+  status: ParseStatus;
+  line?: number | null;
+  charRange?: { start: number; end: number } | null;
+  statements: number[];
+}
+
+export interface SourceSchemaGroup {
+  /** Schema exactly as written in SQL, including `${Schema}` templates. */
+  schema: string;
+  /** True when the schema is a template parameter rather than a real name. */
+  isParameter: boolean;
+  count: number;
+  tables: SourceTableRef[];
+}
+
+export interface SourceInventory {
+  groups: SourceSchemaGroup[];
+  totalTables: number;
+  schemaCount: number;
 }
 
 export interface DialectSpec {
