@@ -23,4 +23,6 @@ export type WebviewMessage =
   /** Save a dialect cheat sheet via the host's save dialog. */
   | { type: "downloadSyntax"; fileName: string; content: string }
   /** Insert a syntax template into the active SQL editor. */
-  | { type: "insertSnippet"; sql: string };
+  | { type: "insertSnippet"; sql: string }
+  /** Copy arbitrary text (e.g. the whole source-table list) to the clipboard. */
+  | { type: "copyText"; text: string };

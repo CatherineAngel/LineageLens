@@ -110,6 +110,7 @@ function ensurePanel(): LineagePanel {
     onPickDialect: () => void chooseDialect(),
     onRefresh: () => void analyzeActiveEditor(),
     onCopy: copyNodeName,
+    onCopyText: copyText,
     onDownloadSyntax: (fileName, content) => void saveSyntaxSheet(fileName, content),
     onInsertSnippet: (sql) => void insertSnippet(sql),
   });
@@ -307,6 +308,12 @@ function revealLine(line: number, charRange?: { start: number; end: number } | n
 function copyNodeName(name: string): void {
   void vscode.env.clipboard.writeText(name);
   void vscode.window.setStatusBarMessage(`已复制 ${name}`, 1600);
+}
+
+function copyText(text: string): void {
+  void vscode.env.clipboard.writeText(text);
+  const lines = text.split("\n").length;
+  void vscode.window.setStatusBarMessage(`已复制源表清单（${lines} 行）`, 1600);
 }
 
 /** Save a dialect cheat sheet wherever the user chooses. */

@@ -1,0 +1,233 @@
+/* ---------------------------------------------------------- source inventory */
+
+/* Toolbar trigger: shows the counts so you never have to open it to know. */
+.inventory-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-trigger.is-active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.inventory-trigger:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.inventory-trigger__schemas {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.inventory-trigger.is-active .inventory-trigger__schemas {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.inventory-trigger__chevron {
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* Drawer: docks to the right edge of the graph area, which is narrowed while
+   open (see .graph-canvas--with-drawer) so no node is ever covered. */
+.inventory-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: -14px 0 32px -18px #000;
+  z-index: 30;
+  overflow: hidden;
+}
+
+/* The graph must shrink, not be covered. React Flow sizes itself to this box,
+   so we only narrow the box - the drawer sits in the freed space. `flex: 1` from
+   the base rule still governs the *height*, so it must not be overridden. */
+.graph-canvas--with-drawer {
+  margin-right: 300px;
+}
+
+/* When the layout stacks vertically the graph is already narrow, so the drawer
+   floats over it and can be dismissed - shrinking further would leave nothing. */
+@media (max-width: 1100px) {
+  .graph-canvas--with-drawer {
+    margin-right: 0;
+  }
+
+  .inventory-drawer {
+    width: min(300px, 70%);
+    /* Floating over a graph that is already short: keep it dismissible and
+       slightly translucent so the shape underneath stays legible. */
+    background: color-mix(in srgb, var(--bg-panel) 94%, transparent);
+    backdrop-filter: blur(3px);
+    border-left: 1px solid var(--border-strong);
+    border-radius: 10px 0 0 10px;
+    top: 8px;
+    bottom: 8px;
+  }
+}
+
+.inventory-drawer__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.inventory-drawer__title {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-faint);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inventory-drawer__summary {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.inventory-drawer__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 5px;
+}
+
+.inventory-drawer__actions .ghost-btn {
+  font-size: 10px;
+  padding: 2px 7px;
+}
+
+.inventory-drawer__empty {
+  padding: 16px 14px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.inventory-drawer__groups {
+  overflow-y: auto;
+  padding: 4px 0 10px;
+  min-height: 0;
+}
+
+.inventory__group {
+  padding: 2px 0;
+}
+
+.inventory__group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.inventory__group-head:hover {
+  background: #17233a;
+}
+
+.inventory__chevron {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-faint);
+  width: 11px;
+  flex-shrink: 0;
+}
+
+.inventory__schema {
+  font-family: "JetBrains Mono", Menlo, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Parameterised schemas are templates, not real databases. */
+.inventory__schema.is-parameter {
+  color: #f0abfc;
+}
+
+.inventory__count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-faint);
+  background: #1e293b;
+  border-radius: 4px;
+  padding: 0 5px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.inventory__tables {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+}
+
+.inventory__table {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px 0 29px;
+}
+
+.inventory__table-name {
+  font-family: "JetBrains Mono", Menlo, monospace;
+  font-size: 11px;
+  color: #b6c4d8;
+  background: none;
+  border: none;
+  padding: 3px 0;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.inventory__table-name:hover {
+  color: var(--accent);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.inventory__badge {
+  font-size: 9px;
+  border-radius: 3px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.inventory__badge--failed {
+  color: #ef4444;
+  border: 1px solid #ef444466;
+}
+
+.inventory__badge--degraded {
+  color: #f59e0b;
+  border: 1px solid #f59e0b66;
+}

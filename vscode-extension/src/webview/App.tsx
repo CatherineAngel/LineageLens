@@ -26,6 +26,10 @@ import {
 } from "./shared/types";
 import type { HostMessage, WebviewMessage } from "../protocol";
 import { SyntaxSheet } from "./components/SyntaxSheet";
+import {
+  SourceInventoryDrawer,
+  SourceInventoryTrigger,
+} from "./components/SourceInventory";
 
 declare function acquireVsCodeApi(): {
   postMessage: (message: WebviewMessage) => void;
@@ -72,6 +76,7 @@ function Workspace() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [showSyntax, setShowSyntax] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<LineageNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -202,6 +207,11 @@ function Workspace() {
               </span>
             </span>
           )}
+          <SourceInventoryTrigger
+            inventory={result?.graph.sourceInventory}
+            open={showInventory}
+            onToggle={() => setShowInventory((v) => !v)}
+          />
           <button className="icon-btn" onClick={() => vscode.postMessage({ type: "refresh" })} title="重新分析">
             ↻
           </button>
@@ -209,7 +219,7 @@ function Workspace() {
       </header>
 
       <div className="graph-pane">
-        <div className="graph-canvas">
+        <div className={`graph-canvas ${showInventory ? "graph-canvas--with-drawer" : ""}`}>
           {!result && (
             <div className="empty-state">
               <div className="empty-state__icon">∅</div>
@@ -271,6 +281,21 @@ function Workspace() {
               style={{ background: "#0b1220" }}
             />
           </ReactFlow>
+
+          <SourceInventoryDrawer
+            inventory={result?.graph.sourceInventory}
+            open={showInventory}
+            onClose={() => setShowInventory(false)}
+            onRevealTable={(line, charRange) =>
+              vscode.postMessage({
+                type: "revealNode",
+                nodeId: "",
+                line,
+                charRange: charRange ?? null,
+              })
+            }
+            onCopy={(text) => vscode.postMessage({ type: "copyText", text })}
+          />
         </div>
 
         <div className="detail-panel">

@@ -17,6 +17,8 @@ const PAIRS = [
   ["engine/lineage_engine.py", "vscode-extension/lineage_engine.py"],
   ["src/syntaxSpec.ts", "vscode-extension/src/webview/syntaxSpec.ts"],
   ["src/styles-syntax.css", "vscode-extension/src/webview/styles-syntax.css"],
+  ["src/styles-inventory.css", "vscode-extension/src/webview/styles-inventory.css"],
+  ["src/components/SourceInventory.tsx", "vscode-extension/src/webview/components/SourceInventory.tsx"],
   ["src/graph/layout.ts", "vscode-extension/src/webview/graph/layout.ts"],
   ["src/graph/TableNode.tsx", "vscode-extension/src/webview/graph/TableNode.tsx"],
   ["src/shared/types.ts", "vscode-extension/src/webview/shared/types.ts"],

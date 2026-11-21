@@ -16,6 +16,7 @@ export interface PanelHandlers {
   onPickDialect: () => void;
   onRefresh: () => void;
   onCopy: (name: string) => void;
+  onCopyText: (text: string) => void;
   onDownloadSyntax: (fileName: string, content: string) => void;
   onInsertSnippet: (sql: string) => void;
 }
@@ -101,6 +102,9 @@ export class LineagePanel {
             break;
           case "insertSnippet":
             handlers.onInsertSnippet(message.sql);
+            break;
+          case "copyText":
+            handlers.onCopyText(message.text);
             break;
         }
       },
