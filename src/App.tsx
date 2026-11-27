@@ -26,6 +26,7 @@ import {
 import { useEngine } from "./hooks/useEngine";
 import { SAMPLES } from "./samples";
 import { SyntaxSheet } from "./components/SyntaxSheet";
+import { FormatterPanel } from "./components/FormatterPanel";
 import {
   SourceInventoryDrawer,
   SourceInventoryTrigger,
@@ -66,6 +67,7 @@ function Workspace() {
   const [realtime, setRealtime] = useState(true);
   const [showPanel, setShowPanel] = useState(true);
   const [showSyntax, setShowSyntax] = useState(false);
+  const [showFormatter, setShowFormatter] = useState(false);
   const [showInventory, setShowInventory] = useState(false);
 
   const { status, detail, ready, analyze } = useEngine();
@@ -243,6 +245,14 @@ function Workspace() {
             </label>
             <button className="primary-btn" onClick={() => void runAnalysis(sql, dialectId)}>
               重新解析
+            </button>
+            <button
+              className="ghost-btn"
+              onClick={() => setShowFormatter(true)}
+              disabled={!sql.trim()}
+              title="格式化 SQL（缩进、关键字大小写可调）"
+            >
+              格式化 …
             </button>
             <span className="pane-foot__meta">
               {sql.split("\n").length} 行 · {sql.length} 字符
@@ -458,6 +468,18 @@ function Workspace() {
           )}
         </section>
       </div>
+
+      <FormatterPanel
+        sql={sql}
+        dialectId={dialectId}
+        dialectLabel={dialectById(dialectId).label}
+        open={showFormatter}
+        onClose={() => setShowFormatter(false)}
+        onApply={(formatted) => {
+          setSql(formatted);
+          setResult(null);
+        }}
+      />
 
       <SyntaxSheet
         dialectId={dialectId}
